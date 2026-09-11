@@ -1,0 +1,10 @@
+###################################################################################################
+# tw-mod-instant-flight module configuration
+###################################################################################################
+
+[InstantFlight]
+
+# Enables instant flight teleport. When enabled, using a flight master teleports
+# the player directly to the destination flight master for the normal flight cost.
+# Set to 0 to disable and use the default flying behavior.
+InstantFlight.Enable = 1
