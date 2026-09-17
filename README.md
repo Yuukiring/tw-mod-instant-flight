@@ -9,9 +9,11 @@ Copy `conf/tw-mod-instant-flight.conf.dist` to your module config directory as `
 ```ini
 [InstantFlight]
 InstantFlight.Enable = 1
+InstantFlight.RequiredItemId = 0
 ```
 
 - `Enable`: set to `0` to disable the module and restore the default flying behavior.
+- `RequiredItemId`: item the player must carry in their bags to activate instant flight. Accepts a single item id or a comma separated list of item ids. Leave at `0` (default) to require no item — the player then flies normally.
 
 ## How it works
 

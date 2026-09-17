@@ -8,3 +8,9 @@
 # the player directly to the destination flight master for the normal flight cost.
 # Set to 0 to disable and use the default flying behavior.
 InstantFlight.Enable = 1
+
+# Item required in the player's bags to activate instant flight. Accepts a single
+# item id or a comma separated list of item ids. When the player does not carry
+# any of them, the flight is handled by the default flying behavior instead.
+# Set to 0 (default) to require no item.
+InstantFlight.RequiredItemId = 0

@@ -8,15 +8,80 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <limits>
+#include <sstream>
+#include <string>
 #include <vector>
 
 namespace
 {
     bool s_enabled = false;
 
+    // Item ids required in the player's bags to activate instant flight.
+    // An empty list means "no item required".
+    std::vector<uint32> s_requiredItemIds;
+
+    // Parses a comma separated list of item ids. Zero and unparsable
+    // entries are dropped, so "0" (the default) yields an empty list.
+    std::vector<uint32> ParseItemIdList(std::string const& raw)
+    {
+        std::vector<uint32> ids;
+
+        std::stringstream ss(raw);
+        std::string token;
+
+        while (std::getline(ss, token, ','))
+        {
+            token.erase(
+                std::remove_if(
+                    token.begin(),
+                    token.end(),
+                    [](unsigned char c) { return std::isspace(c) != 0; }),
+                token.end());
+
+            if (token.empty())
+                continue;
+
+            char* end = nullptr;
+            unsigned long value = std::strtoul(token.c_str(), &end, 10);
+
+            if (end != token.c_str() &&
+                *end == '\0' &&
+                value > 0 &&
+                value <= std::numeric_limits<uint32>::max())
+            {
+                ids.push_back(static_cast<uint32>(value));
+            }
+        }
+
+        return ids;
+    }
+
     void LoadConfig()
     {
         s_enabled = sConfig.GetBoolDefault("InstantFlight.Enable", true);
+        s_requiredItemIds = ParseItemIdList(
+            sConfig.GetStringDefault("InstantFlight.RequiredItemId", "0"));
+    }
+
+    // Instant flight stays inactive until the player carries one of the
+    // configured items. Without it the request is handled by the normal
+    // flight handler instead.
+    bool HasRequiredItem(Player* player)
+    {
+        if (s_requiredItemIds.empty())
+            return true;
+
+        for (uint32 itemId : s_requiredItemIds)
+        {
+            if (player->HasItemCount(itemId, 1, false))
+                return true;
+        }
+
+        return false;
     }
 
     class TwModInstantFlightWorldScript : public WorldScript
@@ -61,6 +126,11 @@ namespace
 
             Player* player = session->GetPlayer();
             if (!player || !player->IsInWorld())
+                return true;
+
+            // Check for a required item in the player's bags before doing
+            // anything else. Without it the normal flight handler runs.
+            if (!HasRequiredItem(player))
                 return true;
 
             // Make a local copy so we can parse without mutating the original packet.
