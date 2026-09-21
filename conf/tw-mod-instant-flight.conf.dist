@@ -8,3 +8,16 @@
 # the player directly to the destination flight master for the normal flight cost.
 # Set to 0 to disable and use the default flying behavior.
 InstantFlight.Enable = 1
+
+# Allow headless (bot) sessions to use instant flight. Disabled by default because
+# Player::TeleportTo requires a client teleport ACK that never arrives for headless
+# sessions, leaving the bot stranded.
+InstantFlight.AllowHeadless = 0
+
+# Comma-separated list of taxi node IDs that should use the normal on-rails flight
+# instead of instant teleport. Useful for one-off quest flights, the custom flying
+# machine, or other special routes that are not detected automatically.
+# The Blackstone/Sparkwater flying-machine nodes are pre-filled below for the live
+# database (116, 117); the alternate IDs from the shipped SQL dump (508, 509) are
+# also included so the defaults work in both cases.
+InstantFlight.ExcludeNodeIDs = 116, 117, 508, 509

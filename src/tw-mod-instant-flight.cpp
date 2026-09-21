@@ -8,15 +8,67 @@
 #include "WorldPacket.h"
 #include "WorldSession.h"
 
+#include <cstdlib>
+#include <set>
+#include <string>
 #include <vector>
 
 namespace
 {
     bool s_enabled = false;
+    bool s_allowHeadless = false;
+    std::set<uint32> s_excludedNodeIds;
+
+    // Parses a comma-separated list of unsigned integers into s_excludedNodeIds.
+    void LoadExcludedNodeIds(std::string const& value)
+    {
+        s_excludedNodeIds.clear();
+        if (value.empty())
+            return;
+
+        size_t start = 0;
+        while (start < value.size())
+        {
+            size_t end = value.find(',', start);
+            if (end == std::string::npos)
+                end = value.size();
+
+            std::string token = value.substr(start, end - start);
+            // Trim whitespace.
+            size_t first = token.find_first_not_of(" \t");
+            size_t last = token.find_last_not_of(" \t");
+            if (first != std::string::npos && last != std::string::npos)
+            {
+                token = token.substr(first, last - first + 1);
+                if (!token.empty())
+                {
+                    char* endPtr = nullptr;
+                    unsigned long id = std::strtoul(token.c_str(), &endPtr, 10);
+                    if (endPtr && *endPtr == '\0')
+                        s_excludedNodeIds.insert(static_cast<uint32>(id));
+                }
+            }
+
+            start = end + 1;
+        }
+    }
 
     void LoadConfig()
     {
         s_enabled = sConfig.GetBoolDefault("InstantFlight.Enable", true);
+        s_allowHeadless = sConfig.GetBoolDefault("InstantFlight.AllowHeadless", false);
+        LoadExcludedNodeIds(sConfig.GetStringDefault("InstantFlight.ExcludeNodeIDs", ""));
+    }
+
+    // Returns true for transport nodes: boats, zeppelins, canoes and other
+    // routes that have no mount model. These are intended to stay on rails.
+    bool IsTransportNode(uint32 nodeId)
+    {
+        TaxiNodesEntry const* nodeEntry = sObjectMgr.GetTaxiNodeEntry(nodeId);
+        if (!nodeEntry)
+            return false;
+
+        return nodeEntry->MountCreatureID[0] == 0 && nodeEntry->MountCreatureID[1] == 0;
     }
 
     class TwModInstantFlightWorldScript : public WorldScript
@@ -59,6 +111,12 @@ namespace
             if (!session)
                 return true;
 
+            // Headless/bot sessions cannot complete a TeleportTo because the
+            // client ACK for the teleport never arrives. Let them use the
+            // normal on-rails flight instead.
+            if (!s_allowHeadless && session->IsHeadless())
+                return true;
+
             Player* player = session->GetPlayer();
             if (!player || !player->IsInWorld())
                 return true;
@@ -97,6 +155,13 @@ namespace
 
             if (nodes.size() < 2)
                 return true;
+
+            // Leave transport routes and manually excluded nodes on rails.
+            for (uint32 node : nodes)
+            {
+                if (IsTransportNode(node) || s_excludedNodeIds.find(node) != s_excludedNodeIds.end())
+                    return true;
+            }
 
             // Validate that the player actually knows the source and destination nodes.
             // GMs with taxi cheat bypass this check in the normal handler, so mirror that.
