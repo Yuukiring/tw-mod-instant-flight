@@ -102,7 +102,7 @@ namespace
         s_allowHeadless = sConfig.GetBoolDefault("InstantFlight.AllowHeadless", false);
         LoadExcludedNodeIds(sConfig.GetStringDefault("InstantFlight.ExcludeNodeIDs", ""));
 
-		s_requiredItemIds = ParseItemIdList(
+    s_requiredItemIds = ParseItemIdList(
             sConfig.GetStringDefault("InstantFlight.RequiredItemId", "0"));
     }
 
@@ -117,7 +117,7 @@ namespace
         return nodeEntry->MountCreatureID[0] == 0 && nodeEntry->MountCreatureID[1] == 0;
     }
 
-	// Instant flight stays inactive until the player carries one of the
+    // Instant flight stays inactive until the player carries one of the
     // configured items. Without it the request is handled by the normal
     // flight handler instead.
     bool HasRequiredItem(Player* player)
@@ -132,7 +132,9 @@ namespace
         }
 
         return false;
-    }    class TwModInstantFlightWorldScript : public WorldScript
+    }
+
+    class TwModInstantFlightWorldScript : public WorldScript
     {
     public:
         TwModInstantFlightWorldScript()
